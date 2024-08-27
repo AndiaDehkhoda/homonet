@@ -1,0 +1,133 @@
+const fs = require("fs");
+const readline = require("readline-sync");
+
+// Läs in produkter från JSON-fil
+const productsData = fs.readFileSync("products.json");
+const products = JSON.parse(productsData);
+
+// Köphistorik
+let purchaseHistory = [];
+
+// Funktion för att visa produkter
+function displayProducts() {
+  console.log("Produkter:");
+  products.forEach((product, index) => {
+    console.log(`${index + 1}. ${product.name} - ${product.price} kr (Lagersaldo: ${product.stock})`);
+  });
+}
+
+// Funktion för att lägga till produkt i varukorgen
+function addToCart(cart, productIndex, quantity) {
+  const selectedProduct = products[productIndex];
+  if (selectedProduct.stock >= quantity) {
+    cart.push({
+      name: selectedProduct.name,
+      price: selectedProduct.price,
+      quantity,
+    });
+    selectedProduct.stock -= quantity;
+    console.log(`${quantity} st ${selectedProduct.name} lades till i varukorgen.`);
+  } else {
+    console.log(`Tyvärr, inte tillräckligt med lagersaldo för ${selectedProduct.name}.`);
+  }
+}
+
+// Funktion för att ta bort produkt från varukorgen
+function removeFromCart(cart, index) {
+  const removedProduct = cart.splice(index, 1)[0];
+  console.log(`${removedProduct.quantity} st ${removedProduct.name} togs bort från varukorgen.`);
+  const productIndex = products.findIndex((p) => p.name === removedProduct.name);
+  products[productIndex].stock += removedProduct.quantity;
+}
+
+// Funktion för att genomföra köp och spara kvitto i historiken
+function checkout(cart) {
+  const receipt = {
+    products: cart,
+    total: cart.reduce((total, product) => total + product.price * product.quantity, 0),
+    timestamp: new Date().toLocaleString(),
+  };
+
+  purchaseHistory.push(receipt);
+  console.log("Köp genomfört!");
+  console.log("Kvitto:");
+  console.log(receipt);
+
+  // Återställ varukorgen efter genomfört köp
+  return [];
+}
+
+// Funktion för att visa köphistorik
+function displayPurchaseHistory() {
+  console.log("Kvittohistorik:");
+  purchaseHistory.forEach((receipt, index) => {
+    console.log(`${index + 1}. Totalt: ${receipt.total} kr, Tid: ${receipt.timestamp}`);
+    console.log("  Produkter:");
+    receipt.products.forEach((product) => {
+      console.log(`    ${product.quantity} st ${product.name} - ${product.price} kr/st`);
+    });
+  });
+}
+
+// Huvudprogram
+let shoppingCart = [];
+
+while (true) {
+  console.log("\nVälkommen till E-handelssystemet!");
+  console.log("1. Visa produkter");
+  console.log("2. Lägg till produkt i varukorg");
+  console.log("3. Ta bort produkt från varukorg");
+  console.log("4. Genomför köp");
+  console.log("5. Visa köphistorik");
+  console.log("6. Avsluta");
+
+  const choice = readline.questionInt("Vänligen välj ett alternativ: ");
+
+  switch (choice) {
+    case 1:
+      displayProducts();
+      break;
+    case 2:
+      displayProducts();
+      const productIndex = readline.questionInt("Vänligen välj produktnummer: ") - 1;
+      const quantity = readline.questionInt("Ange antal: ");
+      addToCart(shoppingCart, productIndex, quantity);
+      break;
+    case 3:
+      if (shoppingCart.length === 0) {
+        console.log("Varukorgen är tom.");
+        break;
+      }
+      console.log("Varukorg:");
+      shoppingCart.forEach((item, index) => {
+        console.log(`${index + 1}. ${item.quantity} st ${item.name}`);
+      });
+      const removeIndex = readline.questionInt("Vänligen välj varunummer att ta bort: ") - 1;
+      removeFromCart(shoppingCart, removeIndex);
+      break;
+    case 4:
+      if (shoppingCart.length === 0) {
+        console.log("Varukorgen är tom. Lägg till produkter innan du genomför köp.");
+        break;
+      }
+      shoppingCart = checkout(shoppingCart);
+      break;
+    case 5:
+      if (purchaseHistory.length === 0) {
+        console.log("Det finns ingen köphistorik.");
+        break;
+      }
+      displayPurchaseHistory();
+      break;
+    case 6:
+      // Spara produkter och köphistorik till JSON-filer innan programmet avslutas
+      fs.writeFileSync("products.json", JSON.stringify(products, null, 2));
+      fs.writeFileSync("purchaseHistory.json", JSON.stringify(purchaseHistory, null, 2));
+      console.log("Programmet avslutas. Tack för ditt besök!");
+      process.exit(0);
+    default:
+      console.log("Ogiltigt val. Vänligen försök igen.");
+  }
+}
+// Kompletteringarna du gjorde ser bra ut,kommer visas godkänd i omniway i veckan
+//bra jobbat
